@@ -4,7 +4,7 @@
 
 ## Project description
 
-The primary objective of this project is to deploy the complete <a href="https://github.com/aws-containers/retail-store-sample-app">retail-store-sample-app</a> to a new EKS cluster, while automating the infrastructure setup and ensuring the application is running, stable, and ready for the development team to access.
+The primary objective of this project is to deploy the complete <a href="https://github.com/BrightDev10-Cloud/retail-store-sample-app.git">retail-store-sample-app</a> to a new EKS cluster, while automating the infrastructure setup and ensuring the application is running, stable, and ready for the development team to access.
 
 This guide provides instructions using Amazon EKS and Terraform.
 Also due to some system limitations on my loacl machine, i decided to run all the work-load on the cloud using a dedicated EC2 instance.
