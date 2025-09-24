@@ -20,3 +20,13 @@ variable "db_password" {
   sensitive   = true
 }
 
+variable "admin_instance_profile" {
+  description = "Name of the IAM instance profile for EKS admin instance"
+  default     = "bedrock-eks-admin-instance-profile"
+}
+
+variable "dev_user_name" {
+  description = "Name of the developer IAM user"
+  default     = "innovatemart-dev"
+}
+
