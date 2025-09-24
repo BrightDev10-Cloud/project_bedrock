@@ -1,16 +1,25 @@
 # InnovateMart: Project Bedrock: EKS App Deployment
 
-## Overview
+![alt text](image.png)
 
-This guide provides instructions to deploy a sample retail app on the cloud using Amazon EKS and Terraform.
-Also due to some system limitations on my loacl machine, i decided to run all the work load on the cloud using a dedicated EC2 instance.
+## Project description
+
+The primary objective of this project is to deploy the complete <a href="https://github.com/aws-containers/retail-store-sample-app">retail-store-sample-app</a> to a new EKS cluster, while automating the infrastructure setup and ensuring the application is running, stable, and ready for the development team to access.
+
+This guide provides instructions using Amazon EKS and Terraform.
+Also due to some system limitations on my loacl machine, i decided to run all the work-load on the cloud using a dedicated EC2 instance.
+
+## Architecture Overview
+
+![alt text](image-1.png)
 
 ## Live Project External IP:
 
 <a href="http://a8e998edb12ae495dbbbb962fa522039-2063582521.us-east-1.elb.amazonaws.com/">External IP<a/>
 
-```
-http://a8e998edb12ae495dbbbb962fa522039-2063582521.us-east-1.elb.amazonaws.com/
+```bash
+    http://a8e998edb12ae495dbbbb962fa522039-2063582521.us-east-1.elb.amazonaws.com/
+
 ```
 
 ### Step 1: Launch a Dedicated EC2 Instance
@@ -27,7 +36,7 @@ http://a8e998edb12ae495dbbbb962fa522039-2063582521.us-east-1.elb.amazonaws.com/
 
 - Update system and install AWS CLI, kubectl, eksctl, and Terraform.
 
-```
+```bash
 
     # Update & install dependencies
     sudo yum update -y
@@ -55,9 +64,9 @@ http://a8e998edb12ae495dbbbb962fa522039-2063582521.us-east-1.elb.amazonaws.com/
 - Create two directories, bedrock-backend-bootstrap/ (for provisioning the terraform state backend) and bedrock-infra/(for provisioning the actual infra on aws
 
   ```bash
-  mkdir ~/project-bedrock
-  cd ~/project-bedrock
-  mkdir bedrock-backend-bootstrap bedrock-infra
+        mkdir ~/project-bedrock
+        cd ~/project-bedrock
+        mkdir bedrock-backend-bootstrap bedrock-infra
   ```
 
 ## Step 3: Set Up Terraform State Backend
@@ -110,225 +119,222 @@ http://a8e998edb12ae495dbbbb962fa522039-2063582521.us-east-1.elb.amazonaws.com/
 - - Initialize, plan & apply:
 
     ```bash
-      cd ~/project-bedrock/state-backend
-      terraform init
-      terraform plan
-      terraform apply
+            cd ~/project-bedrock/state-backend
+            terraform init
+            terraform plan
+            terraform apply
     ```
+
 - - Take note of the name of the S3 bucket and the name of the dynamodb table name for use in the next steps
 
 ## Step 3: Provision AWS Infrastructure with Terraform
 
 - In /bedrock-infra, create these files:
 - - Provider.tf (reference the s3 backend and the dynamodb name here so terraform uses the remote backend)
-  - ```
-      terraform {
-        backend "s3" {
-          bucket         = "bedrock-tf-state-abdul"
-          key            = "bedrock/terraform.tfstate"
-          region         = "us-east-1"
-          dynamodb_table = "bedrock-tfstate-lock"
-          encrypt        = true
+  - ```bash
+        terraform {
+            backend "s3" {
+            bucket         = "bedrock-tf-state-abdul"
+            key            = "bedrock/terraform.tfstate"
+            region         = "us-east-1"
+            dynamodb_table = "bedrock-tfstate-lock"
+            encrypt        = true
+            }
         }
-      }
 
-      provider "aws" {
-        region = var.region
-      }
+        provider "aws" {
+            region = var.region
+        }
     ```
+
 - - Variables.tf
-  - ```
-      variable "region" {
-        default = "us-east-1"
-      }
+  - ```bash
+        variable "region" {
+            default = "us-east-1"
+        }
 
-      variable "vpc_cidr" {
-        default = "10.0.0.0/16"
-      }
+        variable "vpc_cidr" {
+            default = "10.0.0.0/16"
+        }
 
-      variable "eks_cluster_name" {
-        default = "bedrock-eks"
-      }
+        variable "eks_cluster_name" {
+            default = "bedrock-eks"
+        }
 
-      variable "db_username" {
-        description = "Username for the RDS DB"
-        default     = "adminuser"
-      }
+        variable "db_username" {
+            description = "Username for the RDS DB"
+            default     = "adminuser"
+        }
 
-      variable "db_password" {
-        description = "Password for the RDS DB"
-        sensitive   = true
-      }
+        variable "db_password" {
+            description = "Password for the RDS DB"
+            sensitive   = true
+        }
 
-      variable "admin_instance_profile" {
-        description = "Name of the IAM instance profile for EKS admin instance"
-        default     = "bedrock-eks-admin-instance-profile"
-      }
+        variable "admin_instance_profile" {
+            description = "Name of the IAM instance profile for EKS admin instance"
+            default     = "bedrock-eks-admin-instance-profile"
+        }
 
-      variable "dev_user_name" {
-        description = "Name of the developer IAM user"
-        default     = "innovatemart-dev"
-      }
+        variable "dev_user_name" {
+            description = "Name of the developer IAM user"
+            default     = "innovatemart-dev"
+        }
 
     ```
+
 - - main.tf
-  - ```
-    # VPC
-      module "vpc" {
-        source  = "terraform-aws-modules/vpc/aws"
-        version = "~> 5.0"
+  - ```bash
+        # VPC
+        module "vpc" {
+            source  = "terraform-aws-modules/vpc/aws"
+            version = "~> 5.0"
 
-        name                 = "bedrock-vpc"
-        cidr                 = "10.0.0.0/16"
-        azs                  = ["us-east-1a", "us-east-1b", "us-east-1c"]
-        public_subnets       = ["10.0.1.0/24", "10.0.2.0/24", "10.0.3.0/24"]
-        private_subnets      = ["10.0.11.0/24", "10.0.12.0/24", "10.0.13.0/24"]
-        enable_nat_gateway   = false
-        single_nat_gateway   = false
-        map_public_ip_on_launch = true
-      }
-
-      # EKS
-      module "eks" {
-        source  = "terraform-aws-modules/eks/aws"
-        version = "~> 20.0"
-
-        cluster_name    = var.eks_cluster_name
-        cluster_version = "1.29"
-
-        vpc_id     = module.vpc.vpc_id
-        subnet_ids = module.vpc.public_subnets
-
-        cluster_endpoint_private_access = true
-
-        cluster_security_group_additional_rules = {
-          allow_api_from_vpc = {
-            description = "Allow K8s API access from within the VPC"
-            protocol    = "tcp"
-            from_port   = 443
-            to_port     = 443
-            type        = "ingress"
-            cidr_blocks = [module.vpc.vpc_cidr_block]
-          }
+            name                 = "bedrock-vpc"
+            cidr                 = "10.0.0.0/16"
+            azs                  = ["us-east-1a", "us-east-1b", "us-east-1c"]
+            public_subnets       = ["10.0.1.0/24", "10.0.2.0/24", "10.0.3.0/24"]
+            private_subnets      = ["10.0.11.0/24", "10.0.12.0/24", "10.0.13.0/24"]
+            enable_nat_gateway   = false
+            single_nat_gateway   = false
+            map_public_ip_on_launch = true
         }
 
-        access_entries = {
-          admin_instance_role = {
-            principal_arn = aws_iam_role.eks_admin_instance_role.arn
-            policy_associations = {
-              cluster_admin = {
-                policy_arn = "arn:aws:eks::aws:cluster-access-policy/AmazonEKSClusterAdminPolicy"
-                access_scope = {
-                  type = "cluster"
-                }
-              }
+        # EKS
+        module "eks" {
+            source  = "terraform-aws-modules/eks/aws"
+            version = "~> 20.0"
+
+            cluster_name    = var.eks_cluster_name
+            cluster_version = "1.29"
+
+            vpc_id     = module.vpc.vpc_id
+            subnet_ids = module.vpc.public_subnets
+
+            cluster_endpoint_private_access = true
+
+            cluster_security_group_additional_rules = {
+            allow_api_from_vpc = {
+                description = "Allow K8s API access from within the VPC"
+                protocol    = "tcp"
+                from_port   = 443
+                to_port     = 443
+                type        = "ingress"
+                cidr_blocks = [module.vpc.vpc_cidr_block]
             }
-          },
-          local_admin_user = {
-            principal_arn = "arn:aws:iam::221693237976:user/terraform-infra-user"
-            policy_associations = {
-              cluster_admin = {
-                policy_arn = "arn:aws:eks::aws:cluster-access-policy/AmazonEKSClusterAdminPolicy"
-                access_scope = {
-                  type = "cluster"
-                }
-              }
             }
-          }
+
+            access_entries = {
+            admin_instance_role = {
+                principal_arn = aws_iam_role.eks_admin_instance_role.arn
+                policy_associations = {
+                cluster_admin = {
+                    policy_arn = "arn:aws:eks::aws:cluster-access-policy/AmazonEKSClusterAdminPolicy"
+                    access_scope = {
+                    type = "cluster"
+                    }
+                }
+                }
+            },
+            local_admin_user = {
+                principal_arn = "arn:aws:iam::221693237976:user/terraform-infra-user"
+                policy_associations = {
+                cluster_admin = {
+                    policy_arn = "arn:aws:eks::aws:cluster-access-policy/AmazonEKSClusterAdminPolicy"
+                    access_scope = {
+                    type = "cluster"
+                    }
+                }
+                }
+            }
+            }
+
+            eks_managed_node_groups = {
+            default = {
+                instance_types = ["t3.small"]
+                min_size       = 1
+                desired_size   = 2
+                max_size       = 3
+            }
+            }
         }
 
-        eks_managed_node_groups = {
-          default = {
-            instance_types = ["t3.small"]
-            min_size       = 1
-            desired_size   = 2
-            max_size       = 3
-          }
+        # IAM Role and Instance Profile (for management EC2)
+        resource "aws_iam_role" "eks_admin_instance_role" {
+            name = "bedrock-eks-admin-instance-role"
+            assume_role_policy = jsonencode({
+            Version = "2012-10-17",
+            Statement = [{
+                Action    = "sts:AssumeRole",
+                Effect    = "Allow",
+                Principal = { Service = "ec2.amazonaws.com" }
+            }]
+            })
         }
-      }
 
-      # IAM Role and Instance Profile (for management EC2)
-      resource "aws_iam_role" "eks_admin_instance_role" {
-        name = "bedrock-eks-admin-instance-role"
-        assume_role_policy = jsonencode({
-          Version = "2012-10-17",
-          Statement = [{
-            Action    = "sts:AssumeRole",
-            Effect    = "Allow",
-            Principal = { Service = "ec2.amazonaws.com" }
-          }]
-        })
-      }
+        resource "aws_iam_role_policy_attachment" "eks_admin_instance_admin_policy" {
+            role       = aws_iam_role.eks_admin_instance_role.name
+            policy_arn = "arn:aws:iam::aws:policy/AdministratorAccess"
+        }
 
-      resource "aws_iam_role_policy_attachment" "eks_admin_instance_admin_policy" {
-        role       = aws_iam_role.eks_admin_instance_role.name
-        policy_arn = "arn:aws:iam::aws:policy/AdministratorAccess"
-      }
+        resource "aws_iam_instance_profile" "eks_admin_instance_profile" {
+            name = var.admin_instance_profile
+            role = aws_iam_role.eks_admin_instance_role.name
+        }
 
-      resource "aws_iam_instance_profile" "eks_admin_instance_profile" {
-        name = var.admin_instance_profile
-        role = aws_iam_role.eks_admin_instance_role.name
-      }
+        # Read-Only Dev IAM User & Policy
+        resource "aws_iam_user" "dev" {
+            name = var.dev_user_name
+        }
 
-      # Read-Only Dev IAM User & Policy
-      resource "aws_iam_user" "dev" {
-        name = var.dev_user_name
-      }
+        resource "aws_iam_policy" "eks_read_only_custom" {
+            name        = "bedrock-eks-read-only-custom"
+            description = "Custom policy for EKS read-only access"
+            policy = jsonencode({
+            Version = "2012-10-17",
+            Statement = [{
+                Effect = "Allow",
+                Action = [
+                "eks:Describe*",
+                "eks:List*",
+                "logs:FilterLogEvents"
+                ],
+                Resource = "*"
+            }]
+            })
+        }
 
-      resource "aws_iam_policy" "eks_read_only_custom" {
-        name        = "bedrock-eks-read-only-custom"
-        description = "Custom policy for EKS read-only access"
-        policy = jsonencode({
-          Version = "2012-10-17",
-          Statement = [{
-            Effect = "Allow",
-            Action = [
-              "eks:Describe*",
-              "eks:List*",
-              "logs:FilterLogEvents"
-            ],
-            Resource = "*"
-          }]
-        })
-      }
-
-      resource "aws_iam_user_policy_attachment" "dev-readonly" {
-        user       = aws_iam_user.dev.name
-        policy_arn = aws_iam_policy.eks_read_only_custom.arn
-      }
+        resource "aws_iam_user_policy_attachment" "dev-readonly" {
+            user       = aws_iam_user.dev.name
+            policy_arn = aws_iam_policy.eks_read_only_custom.arn
+        }
     ```
-  ```
 
-  ```
 - - terraform.tfvars
-  - ```
-    region           = "us-east-1"
-    eks_cluster_name = "bedrock-eks"
+  - ```bash
+        region           = "us-east-1"
+        eks_cluster_name = "bedrock-eks"
     ```
-  ```
 
-  ```
 - - outputs.tf
-  - ```
-    output "eks_cluster_name" {
-      value = module.eks.cluster_name
-    }
+  - ```bash
+        output "eks_cluster_name" {
+        value = module.eks.cluster_name
+        }
 
-    output "eks_admin_instance_profile_name" {
-      description = "IAM instance profile for the management EC2"
-      value       = aws_iam_instance_profile.eks_admin_instance_profile.name
-    }
+        output "eks_admin_instance_profile_name" {
+        description = "IAM instance profile for the management EC2"
+        value       = aws_iam_instance_profile.eks_admin_instance_profile.name
+        }
     ```
-  ```
 
-  ```
 - - Initialize, plan & apply:
-        ``bash
-          cd ~/project-bedrock/bedrock-infra
-          terraform init
-          terraform plan
-          terraform apply
-    ``
+    ```bash
+            cd ~/project-bedrock/bedrock-infra
+            terraform init
+            terraform plan
+            terraform apply
+    ```
 
 ## Step 4. Configure kubectl for EKS Access
 
@@ -345,7 +351,7 @@ http://a8e998edb12ae495dbbbb962fa522039-2063582521.us-east-1.elb.amazonaws.com/
 
 - Configure kubectl context for your EKS cluster
 - ```
-  aws eks --region us-east-1 update-kubeconfig --name bedrock-eks
+    aws eks --region us-east-1 update-kubeconfig --name bedrock-eks
 
   ```
 
@@ -364,45 +370,60 @@ http://a8e998edb12ae495dbbbb962fa522039-2063582521.us-east-1.elb.amazonaws.com/
 - This shows that both Kubernetes worker nodes are in the Ready state and registered with the control plane, and everything is configured as intended
 
 - cd/ into the root directory and clone the provided retail-store-sample-app or any other microservice application of your choice.
-- ```bash
-  git clone https://github.com/aws-containers/retail-store-sample-app.git
-  cd retail-store-sample-app/eks
 
-  # Deploy all manifests (for in-cluster dependencies)
-  kubectl apply -f .
+- ```bash
+        git clone https://github.com/aws-containers/retail-store-sample-app.git
+        cd retail-store-sample-app/eks
+
+        # Deploy all manifests (for in-cluster dependencies)
+        kubectl apply -f .
   ```
 
 ## Step 6: Clone Your Fork Locally
 
 - On your EC2 or local dev workstation: run this command in the project folder to clone the application:
-- ```
-    git clone https://github.com/BrightDev10-Cloud/retail-store-sample-app.git
-    cd retail-store-sample-app
+- ```bash
+        git clone https://github.com/BrightDev10-Cloud/retail-store-sample-app.git
+        cd retail-store-sample-app
   ```
 
 ## Step 7: How to Deploy Now (If the Manifest Isn’t in the Repo):
 
 - Download the Manifest from the Original Repo’s Releases (replace the gitHub url with the correct project)
-- ```
-  curl -LO https://github.com/aws-containers/retail-store-sample-app/releases/latest/download/kubernetes.yaml
+- ```bash
+        curl -LO https://github.com/aws-containers/retail-store-sample-app/releases/latest/download/kubernetes.yaml
   ```
 
 - This command above saves `kubernetes.yaml` to your current directory.
 - Apply Manifest locally
+
 - ```
     kubectl apply -f kubernetes.yaml
     kubectl wait --for=condition=available deployments --all
   ```
-- After Succesfully applying the manifest configuration, check if the app has been deployed. Run the command below to expose the external IP:
+- After Succesfully applying the manifest configuration, check if the app has been deployed. Run the command below to expose the external IP / Get frontend service endpoint:
+
 - ```
     kubectl get svc ui
   ```
 - You will find the url for your ui looking like this :
-- ```
-      http://a8e998edb12ae495dbbbb962fa522039-2063582521.us-east-1.elb.amazonaws.com/
+- ```bash
+            NAME   TYPE           CLUSTER-IP     EXTERNAL-IP                                      PORT(S)        AGE
+        ui     LoadBalancer   172.20.217.25  a7d8d9c90acf14cb6af41dc753c231f2-474041377.us-east-1.elb.amazonaws.com   80:30718/TCP   XXs
+
   ```
 
-- (Optional) Add the Manifest to Your Fork Copy the downloaded `kubernetes.yaml` into a suitable directory in your fork (for example, create a deploy/ or manifests/ directory).
+- Copy the value from the EXTERNAL-IP column (e.g., a7d8d9c90acf14cb6af41dc753c231f2-474041377.us-east-1.elb.amazonaws.com).
+
+- Go to browser and paste the link below:
+
+```bash
+    http://<EXTERNAL-IP> #input the actual external IP
+```
+
+- The retail-store UI application should load and be ready for user interaction.
+
+- (Optional) Add the Manifest to Your Fork: Copy the downloaded `kubernetes.yaml` into a suitable directory in your fork (for example, create a deploy/ or manifests/ directory).
 - ```
     mkdir deploy
     mv kubernetes.yaml deploy/
@@ -433,41 +454,41 @@ http://a8e998edb12ae495dbbbb962fa522039-2063582521.us-east-1.elb.amazonaws.com/
 - Add secrets: AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY.
 
 - In .github/workflows/deploy-eks.yaml, paste the code below:
-- ```
-      name: Deploy App to EKS
-        on:
-          push:
-            branches: [main]
+- ```bash
+        name: Deploy App to EKS
+            on:
+            push:
+                branches: [main]
 
-      jobs:
-        deploy:
-          runs-on: ubuntu-latest
-          steps:
-            - name: Checkout code
-              uses: actions/checkout@v4
+        jobs:
+            deploy:
+            runs-on: ubuntu-latest
+            steps:
+                - name: Checkout code
+                uses: actions/checkout@v4
 
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: us-east-1
+        - name: Configure AWS credentials
+            uses: aws-actions/configure-aws-credentials@v4
+            with:
+            aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+            aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+            aws-region: us-east-1
 
-      - name: Set up kubectl
-        uses: azure/setup-kubectl@v3
-        with:
-          version: "v1.29.0"
+        - name: Set up kubectl
+            uses: azure/setup-kubectl@v3
+            with:
+            version: "v1.29.0"
 
-      - name: Update kubeconfig for EKS
-        run: aws eks --region us-east-1 update-kubeconfig --name bedrock-eks
+        - name: Update kubeconfig for EKS
+            run: aws eks --region us-east-1 update-kubeconfig --name bedrock-eks
 
-      - name: Deploy manifests
-        run: |
-          kubectl apply -f deploy/kubernetes.yaml
-          kubectl wait --for=condition=available deployments --all
+        - name: Deploy manifests
+            run: |
+            kubectl apply -f deploy/kubernetes.yaml
+            kubectl wait --for=condition=available deployments --all
 
-      - name: Apply manifests to EKS
-      run: kubectl apply -f deploy/kubernetes.yaml
+        - name: Apply manifests to EKS
+        run: kubectl apply -f deploy/kubernetes.yaml
 
   ```
 
