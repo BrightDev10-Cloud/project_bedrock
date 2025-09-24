@@ -1,6 +1,6 @@
 # InnovateMart: Project Bedrock: EKS App Deployment
 
-![alt text](image.png)
+![app snapshot](image.png)
 
 ## Project description
 
@@ -11,7 +11,7 @@ Also due to some system limitations on my loacl machine, i decided to run all th
 
 ## Architecture Overview
 
-![alt text](image-1.png)
+![project architecture diagram](image-1.png)
 
 ## Live Project External IP:
 
