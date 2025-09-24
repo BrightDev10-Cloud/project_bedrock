@@ -445,15 +445,50 @@ Also due to some system limitations on my loacl machine, i decided to run all th
 
 ## Step 8: Setup CI/CD on GitHub actions
 
-- on your GitHub account, create a Personal Access token to get AWS_ACCESS_KEY_ID, & AWS_SECRET_ACCESS_KEY
+- Create a Dedicated IAM User for Automation
 
-- Go to your app repo on GitHub.
+### 1. Log In to AWS Console
+
+- Go to https://console.aws.amazon.com/iam/
+
+### 2. Click "Users" → "Create users"
+
+- Enter a name like bedrock-github-actions.
+
+- Select "Programmatic access".
+
+### 3. Assign Permissions (Attach existing policies directly)
+
+- For full admin on infra/app, attach AdministratorAccess.
+
+- For least privilege, craft a custom policy for EKS/Kubernetes and resource management (recommended for prod).
+
+### 4. Complete User Creation
+
+- Add tags if required.
+
+- Review and create the user.
+
+### 5. Get the Access Keys
+
+- Once the user is created, go to User > bedrock-github-action > Ceate access key
+- Select command line interface (CLI) as the use case
+- Set description tag - (Optional)
+
+- On the final screen, note/copy the "Access key ID" and "Secret access key".
+
+- Download the .csv, keep it secure. You’ll only see the secret once!
+
+### 6. Use the Access keys
+
+- Go to your app or infra repo on GitHub.
 
 - Go to Settings → Secrets and variables → Actions.
 
 - Add secrets: AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY.
 
 - In .github/workflows/deploy-eks.yaml, paste the code below:
+
 - ```bash
         name: Deploy App to EKS
             on:
