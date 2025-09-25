@@ -13,9 +13,9 @@ Also due to some system limitations on my loacl machine, i decided to run all th
 
 ![project architecture diagram](image-1.png)
 
-## Live Project External IP:
+## Live Project url:
 
-<a href="http://a8e998edb12ae495dbbbb962fa522039-2063582521.us-east-1.elb.amazonaws.com/">External IP<a/>
+<a href="http://a8e998edb12ae495dbbbb962fa522039-2063582521.us-east-1.elb.amazonaws.com/">retail-store-sample-app-External_IP<a/>
 
 ```bash
     http://a8e998edb12ae495dbbbb962fa522039-2063582521.us-east-1.elb.amazonaws.com/
