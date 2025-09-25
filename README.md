@@ -134,10 +134,10 @@ Also due to some system limitations on my loacl machine, i decided to run all th
   - ```bash
         terraform {
             backend "s3" {
-            bucket         = "bedrock-tf-state-abdul"
+            bucket         = "bedrock-tf-state-abdul" #replace with the name you gave your backend s3 bucket
             key            = "bedrock/terraform.tfstate"
             region         = "us-east-1"
-            dynamodb_table = "bedrock-tfstate-lock"
+            dynamodb_table = "bedrock-tfstate-lock"  #replace with the name you gave your dynamodb table
             encrypt        = true
             }
         }
@@ -336,20 +336,17 @@ Also due to some system limitations on my loacl machine, i decided to run all th
             terraform apply
     ```
 
-## Step 4. Configure kubectl for EKS Access
+## Step 4. Give the dedicated EC2 instance the newly ccreated ``` eks_admin_instance_profile ``` to give it access to the EKS cluster and run kubectl commands 
 
-- After successful provisioning: type this command in your terminal
-- ```bash
-      aws eks --region us-east-1 update-kubeconfig --name bedrock-eks
-      kubectl get nodes
-  ```
-  ```
-  If you can't list nodes, verify the EC2 instance role as mapped in access_entries and ensure your IAM policies and security groups are correct.
-  ```
+- After successful provisioning: attach the ```eks_admin_instance_profile``` IAM role to the dedicated EC2 instance running the workload so it can have access to the kubernetes cluster.
+- Reboot the instance to apply the new IAM role (This might take a minute or two to take effect)
+
+ 
 
 ## Step 5. Deploy the Sample App and In-Cluster Dependencies
 
 - Configure kubectl context for your EKS cluster
+  
 - ```
     aws eks --region us-east-1 update-kubeconfig --name bedrock-eks
 
@@ -367,16 +364,10 @@ Also due to some system limitations on my loacl machine, i decided to run all th
       ip-10-0-1-201.ec2.internal   Ready    <none>   19m   v1.29.15-eks-3abbec1
       ip-10-0-3-156.ec2.internal   Ready    <none>   18m   v1.29.15-eks-3abbec1
   ```
+ 
 - This shows that both Kubernetes worker nodes are in the Ready state and registered with the control plane, and everything is configured as intended
-
-- cd/ into the root directory and clone the provided retail-store-sample-app or any other microservice application of your choice.
-
-- ```bash
-        git clone https://github.com/aws-containers/retail-store-sample-app.git
-        cd retail-store-sample-app/eks
-
-        # Deploy all manifests (for in-cluster dependencies)
-        kubectl apply -f .
+  ```
+      If you can't list nodes, verify the EC2 instance role as mapped in access_entries and ensure your IAM policies and security groups are correct.
   ```
 
 ## Step 6: Clone Your Fork Locally
@@ -389,7 +380,7 @@ Also due to some system limitations on my loacl machine, i decided to run all th
 
 ## Step 7: How to Deploy Now (If the Manifest Isn’t in the Repo):
 
-- Download the Manifest from the Original Repo’s Releases (replace the gitHub url with the correct project)
+- Download the Manifest from the Original Repo’s Releases (replace the gitHub url with the correct project url)
 - ```bash
         curl -LO https://github.com/aws-containers/retail-store-sample-app/releases/latest/download/kubernetes.yaml
   ```
